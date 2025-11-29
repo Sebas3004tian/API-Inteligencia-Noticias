@@ -23,9 +23,12 @@ func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	// concatenar texto para embedding
 	text := article.Title + " " + article.Description + " " + article.Content
-	vector := h.Embeds.EmbedText(text)
+
+	vector, err := h.Embeds.EmbedText(text)
+	if err != nil {
+		return err
+	}
 
 	log.Println("Artículo recibido:")
 	log.Println("ID: ", article.ID)
