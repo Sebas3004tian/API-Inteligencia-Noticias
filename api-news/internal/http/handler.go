@@ -10,46 +10,58 @@ import (
 
 type ArticleHandler struct {
 	Embeds *services.EmbedService
+	Qdrant *services.QdrantService
 }
 
-func NewArticleHandler(e *services.EmbedService) *ArticleHandler {
-	return &ArticleHandler{Embeds: e}
+func NewArticleHandler(e *services.EmbedService, q *services.QdrantService) *ArticleHandler {
+	return &ArticleHandler{Embeds: e, Qdrant: q}
 }
+
 func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 	var articles []models.Article
 
 	if err := c.BodyParser(&articles); err != nil {
-		var single models.Article
-		if err2 := c.BodyParser(&single); err2 != nil {
-			return fiber.ErrBadRequest
-		}
-		articles = append(articles, single)
+		return fiber.ErrBadRequest
 	}
 
-	results := make([]fiber.Map, 0)
+	var results []map[string]interface{}
 
 	for _, article := range articles {
 		text := article.Title + " " + article.Description + " " + article.Content
 
 		vector, err := h.Embeds.EmbedText(text)
 		if err != nil {
-			return err
+			log.Println("Error embedding text:", err)
+			results = append(results, map[string]interface{}{
+				"id":    article.ID,
+				"error": err.Error(),
+			})
+			continue
 		}
 
-		log.Println("Artículo recibido:")
-		log.Println("ID:", article.ID)
-		log.Println("Title:", article.Title)
-		log.Println("Vector:", vector)
+		payload := map[string]string{
+			"id":          article.ID,
+			"title":       article.Title,
+			"description": article.Description,
+			"content":     article.Content,
+		}
 
-		results = append(results, fiber.Map{
+		if err := h.Qdrant.InsertPoint(vector, payload); err != nil {
+			log.Println("Error inserting point:", err)
+			results = append(results, map[string]interface{}{
+				"id":    article.ID,
+				"error": "Failed to index",
+			})
+			continue
+		}
+
+		log.Printf("Inserted article %s into Qdrant", article.ID)
+		results = append(results, map[string]interface{}{
 			"id":     article.ID,
-			"status": "indexed (simulado)",
+			"status": "indexed",
 			"vector": vector,
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"count":   len(results),
-		"results": results,
-	})
+	return c.JSON(results)
 }
