@@ -27,7 +27,6 @@ func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 	text := article.Title + " " + article.Description + " " + article.Content
 	vector := h.Embeds.EmbedText(text)
 
-	// Print en consola
 	log.Println("Artículo recibido:")
 	log.Println("ID: ", article.ID)
 	log.Println("Title:", article.Title)
