@@ -1,7 +1,15 @@
 .env
 .env.*
+venv/
+.venv/
 *.log
 bin/
 dist/
 *.exe
 .DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
