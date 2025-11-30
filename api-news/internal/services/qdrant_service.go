@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Sebas3004tian/api-news/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -14,22 +15,6 @@ type QdrantService struct {
 	Host       string
 	Port       int
 	Collection string
-}
-
-type qdrantSearchRequest struct {
-	Vector      []float32 `json:"vector"`
-	Limit       int       `json:"limit"`
-	WithPayload bool      `json:"with_payload"`
-}
-
-type qdrantPoint struct {
-	ID      string            `json:"id"`
-	Payload map[string]string `json:"payload"`
-	Score   float64           `json:"score"`
-}
-
-type qdrantSearchResponse struct {
-	Result []qdrantPoint `json:"result"`
 }
 
 func NewQdrantService(host string, port int, collection string) *QdrantService {
@@ -40,14 +25,30 @@ func NewQdrantService(host string, port int, collection string) *QdrantService {
 	}
 }
 
-func (q *QdrantService) EnsureCollection(vectorSize int) error {
+func (q *QdrantService) EnsureCollection(config models.CollectionConfig) error {
 	url := fmt.Sprintf("http://%s:%d/collections/%s", q.Host, q.Port, q.Collection)
 
 	body := map[string]interface{}{
 		"vectors": map[string]interface{}{
-			"size":     vectorSize,
+			"size":     config.VectorSize,
 			"distance": "Cosine",
 		},
+		"hnsw_config": map[string]interface{}{
+			"m":            config.HnswM,
+			"ef_construct": config.HnswEfConst,
+			"on_disk":      false,
+		},
+		"on_disk_payload": true,
+	}
+
+	if len(config.PayloadIndexes) > 0 {
+		payloadSchema := make(map[string]interface{})
+		for field, indexType := range config.PayloadIndexes {
+			payloadSchema[field] = map[string]interface{}{
+				"field_index_type": indexType,
+			}
+		}
+		body["payload_schema"] = payloadSchema
 	}
 
 	jsonBody, _ := json.Marshal(body)
@@ -101,8 +102,8 @@ func (q *QdrantService) InsertPoint(vector []float32, payload map[string]string)
 	return nil
 }
 
-func (q *QdrantService) SearchHTTP(ctx context.Context, vector []float32, limit int) ([]qdrantPoint, error) {
-	reqBody := qdrantSearchRequest{
+func (q *QdrantService) SearchHTTP(ctx context.Context, vector []float32, limit int) ([]models.QdrantPoint, error) {
+	reqBody := models.QdrantSearchRequest{
 		Vector:      vector,
 		Limit:       limit,
 		WithPayload: true,
@@ -129,7 +130,7 @@ func (q *QdrantService) SearchHTTP(ctx context.Context, vector []float32, limit 
 		return nil, fmt.Errorf("qdrant returned status %d", resp.StatusCode)
 	}
 
-	var searchResp qdrantSearchResponse
+	var searchResp models.QdrantSearchResponse
 	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
 		return nil, err
 	}
