@@ -33,11 +33,15 @@ func (s *ArticleService) IndexArticles(articles []models.Article) ([]map[string]
 		}
 
 		payload := map[string]string{
-			"id":          article.ID,
-			"title":       article.Title,
-			"description": article.Description,
-			"content":     article.Content,
-			"link":        article.Link,
+			"id":           article.ID,
+			"title":        article.Title,
+			"description":  article.Description,
+			"content":      article.Content,
+			"url":          article.Url,
+			"image":        article.Image,
+			"published_at": article.PublishedAt,
+			"source_name":  article.SourceName,
+			"source_url":   article.SourceURL,
 		}
 
 		err = s.Qdrant.InsertPoint(vector, payload)

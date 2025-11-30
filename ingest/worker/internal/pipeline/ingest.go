@@ -25,7 +25,11 @@ type ArticlePayload struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Content     string `json:"content"`
-	Link        string `json:"url"`
+	Url         string `json:"url"`
+	Image       string `json:"image"`
+	PublishedAt string `json:"publishedAt"`
+	SourceName  string `json:"sourceName"`
+	SourceURL   string `json:"sourceUrl"`
 }
 
 func NewIngestor(client *gnews.Client, country, lang, max string, endpoint string) *Ingestor {
@@ -74,7 +78,13 @@ func (i *Ingestor) Run() error {
 				Title:       a.Title,
 				Description: a.Description,
 				Content:     a.Content,
+				Url:         a.URL,
+				Image:       a.Image,
+				PublishedAt: a.PublishedAt,
+				SourceName:  a.Source.Name,
+				SourceURL:   a.Source.URL,
 			}
+
 		}
 	}
 
