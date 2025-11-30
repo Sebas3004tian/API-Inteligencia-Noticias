@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/Sebas3004tian/api-news/internal/config"
-	appHttp "github.com/Sebas3004tian/api-news/internal/http"
+	"github.com/Sebas3004tian/api-news/internal/http"
 	"github.com/Sebas3004tian/api-news/internal/models"
 	"github.com/Sebas3004tian/api-news/internal/services"
 )
@@ -34,11 +34,11 @@ func main() {
 		log.Fatal("No se pudo crear/asegurar colección:", err)
 	}
 
-	handler := appHttp.NewArticleHandler(embedService, qdrantService)
+	articleService := services.NewArticleService(embedService, qdrantService)
+	articleHandler := http.NewArticleHandler(articleService)
 
-	// Rutas
-	app.Post("/index", handler.Index)
-	app.Get("/search", handler.Search)
+	app.Post("/index", articleHandler.Index)
+	app.Get("/search", articleHandler.Search)
 
 	log.Println("Servidor iniciado en :8081")
 	log.Fatal(app.Listen(":8081"))
