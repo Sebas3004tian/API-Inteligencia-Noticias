@@ -12,6 +12,7 @@ type Config struct {
 	GNewsLang   string
 	GNewsMax    string
 	GNewsQuery  string
+	ApiEndpoint string
 }
 
 func Load() *Config {
@@ -25,6 +26,7 @@ func Load() *Config {
 		GNewsLang:   getEnv("GNEWS_LANG", "es"),
 		GNewsMax:    getEnv("GNEWS_MAX", "10"),
 		GNewsQuery:  getEnv("GNEWS_QUERY", "colombia"),
+		ApiEndpoint: getEnv("API_ENDPOINT", "http://localhost:8080/index"),
 	}
 }
 

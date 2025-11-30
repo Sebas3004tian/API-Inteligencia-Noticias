@@ -18,6 +18,7 @@ func main() {
 		cfg.GNewsQuery,
 		cfg.GNewsLang,
 		cfg.GNewsMax,
+		cfg.ApiEndpoint,
 	)
 
 	if err := ingestor.Run(); err != nil {
