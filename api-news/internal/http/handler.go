@@ -44,6 +44,7 @@ func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 			"title":       article.Title,
 			"description": article.Description,
 			"content":     article.Content,
+			"link":        article.Link,
 		}
 
 		if err := h.Qdrant.InsertPoint(vector, payload); err != nil {
