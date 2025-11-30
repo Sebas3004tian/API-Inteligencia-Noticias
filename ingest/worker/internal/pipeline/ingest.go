@@ -25,6 +25,7 @@ type ArticlePayload struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Content     string `json:"content"`
+	Link        string `json:"url"`
 }
 
 func NewIngestor(client *gnews.Client, country, lang, max string, endpoint string) *Ingestor {
