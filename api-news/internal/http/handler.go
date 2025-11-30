@@ -34,7 +34,7 @@ func (h *ArticleHandler) Search(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "query param is required")
 	}
 
-	results, err := h.Articles.SearchArticles(query)
+	results, err := h.Articles.SearchArticles(c.Context(), query)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}

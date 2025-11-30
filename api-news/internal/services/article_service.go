@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"log"
 
 	"github.com/Sebas3004tian/api-news/internal/models"
@@ -66,14 +67,14 @@ func (s *ArticleService) IndexArticles(articles []models.Article) ([]map[string]
 	return results, nil
 }
 
-func (s *ArticleService) SearchArticles(query string) ([]map[string]interface{}, error) {
+func (s *ArticleService) SearchArticles(ctx context.Context, query string) ([]map[string]interface{}, error) {
 
 	vector, err := s.Embeds.EmbedText(query)
 	if err != nil {
 		return nil, err
 	}
 
-	results, err := s.Qdrant.SearchHTTP(nil, vector, 10)
+	results, err := s.Qdrant.SearchHTTP(ctx, vector, 10)
 	if err != nil {
 		return nil, err
 	}
