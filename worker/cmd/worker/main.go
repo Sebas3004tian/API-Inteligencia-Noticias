@@ -15,7 +15,7 @@ func main() {
 
 	ingestor := pipeline.NewIngestor(
 		client,
-		cfg.GNewsQuery,
+		cfg.GNewsCountry,
 		cfg.GNewsLang,
 		cfg.GNewsMax,
 		cfg.ApiEndpoint,
