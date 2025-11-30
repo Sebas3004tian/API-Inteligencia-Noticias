@@ -1,139 +1,47 @@
 package services
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
 
+	"github.com/Sebas3004tian/api-news/internal/clients/qdrant"
 	"github.com/Sebas3004tian/api-news/internal/models"
-	"github.com/google/uuid"
 )
 
 type QdrantService struct {
-	Host       string
-	Port       int
-	Collection string
+	Client *qdrant.Client
 }
 
-func NewQdrantService(host string, port int, collection string) *QdrantService {
-	return &QdrantService{
-		Host:       host,
-		Port:       port,
-		Collection: collection,
-	}
+func NewQdrantService(client *qdrant.Client) *QdrantService {
+	return &QdrantService{Client: client}
 }
 
-func (q *QdrantService) EnsureCollection(config models.CollectionConfig) error {
-	url := fmt.Sprintf("http://%s:%d/collections/%s", q.Host, q.Port, q.Collection)
-
+func (s *QdrantService) EnsureCollection(cfg models.CollectionConfig) error {
 	body := map[string]interface{}{
 		"vectors": map[string]interface{}{
-			"size":     config.VectorSize,
+			"size":     cfg.VectorSize,
 			"distance": "Cosine",
 		},
 		"hnsw_config": map[string]interface{}{
-			"m":            config.HnswM,
-			"ef_construct": config.HnswEfConst,
+			"m":            cfg.HnswM,
+			"ef_construct": cfg.HnswEfConst,
 			"on_disk":      false,
 		},
 		"on_disk_payload": true,
 	}
 
-	if len(config.PayloadIndexes) > 0 {
-		payloadSchema := make(map[string]interface{})
-		for field, indexType := range config.PayloadIndexes {
-			payloadSchema[field] = map[string]interface{}{
-				"field_index_type": indexType,
-			}
-		}
-		body["payload_schema"] = payloadSchema
-	}
-
-	jsonBody, _ := json.Marshal(body)
-
-	req, _ := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 && resp.StatusCode != 409 {
-		return fmt.Errorf("failed to create collection: HTTP %d", resp.StatusCode)
-	}
-
-	return nil
+	return s.Client.EnsureCollection(body)
 }
 
-func (q *QdrantService) InsertPoint(vector []float32, payload map[string]string) error {
-	url := fmt.Sprintf("http://%s:%d/collections/%s/points", q.Host, q.Port, q.Collection)
-
-	id := uuid.New().String()
-
-	body := map[string]interface{}{
-		"points": []map[string]interface{}{
-			{
-				"id":      id,
-				"vector":  vector,
-				"payload": payload,
-			},
-		},
-	}
-
-	jsonBody, _ := json.Marshal(body)
-
-	req, _ := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to insert point: HTTP %d", resp.StatusCode)
-	}
-
-	return nil
+func (s *QdrantService) Insert(vector []float32, payload map[string]string) error {
+	return s.Client.InsertPoint(vector, payload)
 }
 
-func (q *QdrantService) SearchHTTP(ctx context.Context, vector []float32, limit int) ([]models.QdrantPoint, error) {
-	reqBody := models.QdrantSearchRequest{
+func (s *QdrantService) Search(ctx context.Context, vector []float32, limit int) ([]qdrant.QdrantPoint, error) {
+	req := qdrant.QdrantSearchRequest{
 		Vector:      vector,
 		Limit:       limit,
 		WithPayload: true,
 	}
 
-	bodyBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("http://%s:%d/collections/%s/points/search", q.Host, q.Port, q.Collection)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("qdrant returned status %d", resp.StatusCode)
-	}
-
-	var searchResp models.QdrantSearchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
-		return nil, err
-	}
-
-	return searchResp.Result, nil
+	return s.Client.Search(ctx, req)
 }

@@ -1,4 +1,4 @@
-package models
+package qdrant
 
 type QdrantSearchRequest struct {
 	Vector      []float32               `json:"vector"`

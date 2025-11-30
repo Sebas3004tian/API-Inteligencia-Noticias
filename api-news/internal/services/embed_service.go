@@ -1,10 +1,14 @@
 package services
 
+import (
+	"github.com/Sebas3004tian/api-news/internal/clients/embed"
+)
+
 type EmbedService struct {
-	client EmbeddingClient
+	client embed.EmbeddingClient
 }
 
-func NewEmbedService(client EmbeddingClient) *EmbedService {
+func NewEmbedService(client embed.EmbeddingClient) *EmbedService {
 	return &EmbedService{client: client}
 }
 

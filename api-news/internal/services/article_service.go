@@ -45,7 +45,7 @@ func (s *ArticleService) IndexArticles(articles []models.Article) ([]map[string]
 			"source_url":   article.SourceURL,
 		}
 
-		err = s.Qdrant.InsertPoint(vector, payload)
+		err = s.Qdrant.Insert(vector, payload)
 		if err != nil {
 			log.Println("Error inserting into Qdrant:", err)
 			results = append(results, map[string]interface{}{
@@ -74,7 +74,7 @@ func (s *ArticleService) SearchArticles(ctx context.Context, query string) ([]ma
 		return nil, err
 	}
 
-	results, err := s.Qdrant.SearchHTTP(ctx, vector, 10)
+	results, err := s.Qdrant.Search(ctx, vector, 10)
 	if err != nil {
 		return nil, err
 	}

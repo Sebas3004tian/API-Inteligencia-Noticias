@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"github.com/Sebas3004tian/api-news/internal/models"
@@ -25,7 +25,19 @@ func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	return c.JSON(results)
+	hasErrors := false
+	for _, r := range results {
+		if r["error"] != nil {
+			hasErrors = true
+			break
+		}
+	}
+
+	if hasErrors {
+		return c.Status(207).JSON(results)
+	}
+
+	return c.Status(200).JSON(results)
 }
 
 func (h *ArticleHandler) Search(c *fiber.Ctx) error {

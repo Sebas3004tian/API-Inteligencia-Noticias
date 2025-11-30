@@ -5,8 +5,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/Sebas3004tian/api-news/internal/clients/embed"
+	"github.com/Sebas3004tian/api-news/internal/clients/qdrant"
 	"github.com/Sebas3004tian/api-news/internal/config"
-	"github.com/Sebas3004tian/api-news/internal/http"
+	apiHttp "github.com/Sebas3004tian/api-news/internal/http"
+	"github.com/Sebas3004tian/api-news/internal/http/handler"
 	"github.com/Sebas3004tian/api-news/internal/models"
 	"github.com/Sebas3004tian/api-news/internal/services"
 )
@@ -16,12 +19,13 @@ func main() {
 
 	app := fiber.New()
 
-	// Embedding service
-	embeddingClient := services.NewHttpEmbeddingClient(cfg.EmbeddingURL)
-	embedService := services.NewEmbedService(embeddingClient)
+	// Clients
+	embeddingClient := embed.NewHttpEmbeddingClient(cfg.EmbeddingURL)
+	qdrantClient := qdrant.NewClient(cfg.QdrantHost, cfg.QdrantPort, cfg.Collection)
 
-	// Qdrant service
-	qdrantService := services.NewQdrantService(cfg.QdrantHost, cfg.QdrantPort, cfg.Collection)
+	// Services
+	embedService := services.NewEmbedService(embeddingClient)
+	qdrantService := services.NewQdrantService(qdrantClient)
 
 	qdrantConfig := models.CollectionConfig{
 		VectorSize:     384,
@@ -29,16 +33,16 @@ func main() {
 		HnswEfConst:    100,
 		PayloadIndexes: nil,
 	}
-
 	if err := qdrantService.EnsureCollection(qdrantConfig); err != nil {
 		log.Fatal("No se pudo crear/asegurar colección:", err)
 	}
-
 	articleService := services.NewArticleService(embedService, qdrantService)
-	articleHandler := http.NewArticleHandler(articleService)
 
-	app.Post("/index", articleHandler.Index)
-	app.Get("/search", articleHandler.Search)
+	// Handlers
+	articleHandler := handler.NewArticleHandler(articleService)
+
+	// Routes
+	apiHttp.SetupRoutes(app, articleHandler)
 
 	log.Println("Servidor iniciado en :8081")
 	log.Fatal(app.Listen(":8081"))
