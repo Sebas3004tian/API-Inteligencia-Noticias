@@ -15,10 +15,10 @@ func NewClient(apiKey string) *Client {
 	return &Client{APIKey: apiKey}
 }
 
-func (c *Client) Search(query, lang string, max string) (*Response, error) {
+func (c *Client) Search(q string, country string, lang string, max string) (*Response, error) {
 	url := fmt.Sprintf(
 		"https://gnews.io/api/v4/search?q=%s&lang=%s&max=%s&apikey=%s",
-		query, lang, max, c.APIKey,
+		q, lang, max, c.APIKey,
 	)
 
 	resp, err := http.Get(url)

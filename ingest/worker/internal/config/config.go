@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	GNewsAPIKey string
-	GNewsLang   string
-	GNewsMax    string
-	GNewsQuery  string
-	ApiEndpoint string
+	GNewsAPIKey  string
+	GNewsLang    string
+	GNewsMax     string
+	GNewsCountry string
+	ApiEndpoint  string
 }
 
 func Load() *Config {
@@ -22,11 +22,11 @@ func Load() *Config {
 	}
 
 	return &Config{
-		GNewsAPIKey: getEnv("GNEWS_API_KEY", ""),
-		GNewsLang:   getEnv("GNEWS_LANG", "es"),
-		GNewsMax:    getEnv("GNEWS_MAX", "10"),
-		GNewsQuery:  getEnv("GNEWS_QUERY", "colombia"),
-		ApiEndpoint: getEnv("API_ENDPOINT", "http://localhost:8080/index"),
+		GNewsAPIKey:  getEnv("GNEWS_API_KEY", ""),
+		GNewsLang:    getEnv("GNEWS_LANG", "es"),
+		GNewsMax:     getEnv("GNEWS_MAX", "10"),
+		GNewsCountry: getEnv("GNEWS_COUNTRY", "co"),
+		ApiEndpoint:  getEnv("API_ENDPOINT", "http://localhost:8080/index"),
 	}
 }
 

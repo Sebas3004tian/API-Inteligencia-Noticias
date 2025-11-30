@@ -14,7 +14,7 @@ import (
 
 type Ingestor struct {
 	Client      *gnews.Client
-	Query       string
+	Country     string
 	Lang        string
 	Max         string
 	ApiEndpoint string
@@ -27,10 +27,10 @@ type ArticlePayload struct {
 	Content     string `json:"content"`
 }
 
-func NewIngestor(client *gnews.Client, q, lang, max string, endpoint string) *Ingestor {
+func NewIngestor(client *gnews.Client, country, lang, max string, endpoint string) *Ingestor {
 	return &Ingestor{
 		Client:      client,
-		Query:       q,
+		Country:     country,
 		Lang:        lang,
 		Max:         max,
 		ApiEndpoint: endpoint,
@@ -38,27 +38,53 @@ func NewIngestor(client *gnews.Client, q, lang, max string, endpoint string) *In
 }
 
 func (i *Ingestor) Run() error {
-	log.Println("Consultando GNews...")
+	log.Println("Consultando GNews con múltiples queries...")
 
-	resp, err := i.Client.Search(i.Query, i.Lang, i.Max)
-	if err != nil {
-		return err
+	letters := []string{
+		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+		"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
 	}
 
-	log.Printf("Recibidos %d artículos\n", len(resp.Articles))
+	articleMap := make(map[string]ArticlePayload)
 
-	var payload []ArticlePayload
+	for _, q := range letters {
+		log.Printf(" - Consultando con query='%s'", q)
 
-	for _, a := range resp.Articles {
-		payload = append(payload, ArticlePayload{
-			ID:          uuid.New().String(),
-			Title:       a.Title,
-			Description: a.Description,
-			Content:     a.Content,
-		})
+		resp, err := i.Client.Search(q, i.Country, i.Lang, i.Max)
+		if err != nil {
+			log.Printf("Error con query '%s': %v", q, err)
+			continue
+		}
+
+		for _, a := range resp.Articles {
+			id := uuid.New().String()
+
+			key := a.URL
+			if key == "" {
+				key = a.Title
+			}
+
+			if _, exists := articleMap[key]; exists {
+				continue
+			}
+
+			articleMap[key] = ArticlePayload{
+				ID:          id,
+				Title:       a.Title,
+				Description: a.Description,
+				Content:     a.Content,
+			}
+		}
 	}
 
-	data, err := json.Marshal(payload)
+	var finalPayload []ArticlePayload
+	for _, v := range articleMap {
+		finalPayload = append(finalPayload, v)
+	}
+
+	log.Printf("Total final sin duplicados: %d artículos", len(finalPayload))
+
+	data, err := json.Marshal(finalPayload)
 	if err != nil {
 		return fmt.Errorf("error serializando payload: %w", err)
 	}
@@ -82,6 +108,5 @@ func (i *Ingestor) Run() error {
 	}
 
 	log.Println("Ingesta completada exitosamente")
-
 	return nil
 }
