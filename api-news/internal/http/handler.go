@@ -10,33 +10,86 @@ import (
 
 type ArticleHandler struct {
 	Embeds *services.EmbedService
+	Qdrant *services.QdrantService
 }
 
-func NewArticleHandler(e *services.EmbedService) *ArticleHandler {
-	return &ArticleHandler{Embeds: e}
+func NewArticleHandler(e *services.EmbedService, q *services.QdrantService) *ArticleHandler {
+	return &ArticleHandler{Embeds: e, Qdrant: q}
 }
 
 func (h *ArticleHandler) Index(c *fiber.Ctx) error {
-	var article models.Article
+	var articles []models.Article
 
-	if err := c.BodyParser(&article); err != nil {
+	if err := c.BodyParser(&articles); err != nil {
 		return fiber.ErrBadRequest
 	}
 
-	text := article.Title + " " + article.Description + " " + article.Content
+	var results []map[string]interface{}
 
-	vector, err := h.Embeds.EmbedText(text)
-	if err != nil {
-		return err
+	for _, article := range articles {
+		text := article.Title + " " + article.Description + " " + article.Content
+
+		vector, err := h.Embeds.EmbedText(text)
+		if err != nil {
+			log.Println("Error embedding text:", err)
+			results = append(results, map[string]interface{}{
+				"id":    article.ID,
+				"error": err.Error(),
+			})
+			continue
+		}
+
+		payload := map[string]string{
+			"id":          article.ID,
+			"title":       article.Title,
+			"description": article.Description,
+			"content":     article.Content,
+		}
+
+		if err := h.Qdrant.InsertPoint(vector, payload); err != nil {
+			log.Println("Error inserting point:", err)
+			results = append(results, map[string]interface{}{
+				"id":    article.ID,
+				"error": "Failed to index",
+			})
+			continue
+		}
+
+		log.Printf("Inserted article %s into Qdrant", article.ID)
+		results = append(results, map[string]interface{}{
+			"id":     article.ID,
+			"status": "indexed",
+			"vector": vector,
+		})
 	}
 
-	log.Println("Artículo recibido:")
-	log.Println("ID: ", article.ID)
-	log.Println("Title:", article.Title)
-	log.Println("Vector:", vector)
+	return c.JSON(results)
+}
+func (h *ArticleHandler) Search(c *fiber.Ctx) error {
+	query := c.Query("query")
+	if query == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "query param is required")
+	}
 
-	return c.JSON(fiber.Map{
-		"status": "indexed (simulado)",
-		"vector": vector,
-	})
+	vector, err := h.Embeds.EmbedText(query)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to embed query")
+	}
+
+	results, err := h.Qdrant.SearchHTTP(c.Context(), vector, 10)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "search error: "+err.Error())
+	}
+
+	var response []map[string]interface{}
+
+	for _, r := range results {
+		response = append(response, map[string]interface{}{
+			"id":    r.ID,
+			"score": r.Score,
+			"item":  r.Payload,
+		})
+	}
+
+	return c.JSON(response)
 }
