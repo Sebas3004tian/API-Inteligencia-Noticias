@@ -42,6 +42,7 @@ func main() {
 	handler := appHttp.NewArticleHandler(embedService, qdrantService)
 
 	app.Post("/index", handler.Index)
+	app.Get("/search", handler.Search)
 
 	log.Println("Servidor iniciado en :8081")
 	log.Fatal(app.Listen(":8081"))

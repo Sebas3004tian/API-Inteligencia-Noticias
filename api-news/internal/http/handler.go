@@ -65,3 +65,31 @@ func (h *ArticleHandler) Index(c *fiber.Ctx) error {
 
 	return c.JSON(results)
 }
+func (h *ArticleHandler) Search(c *fiber.Ctx) error {
+	query := c.Query("query")
+	if query == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "query param is required")
+	}
+
+	vector, err := h.Embeds.EmbedText(query)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to embed query")
+	}
+
+	results, err := h.Qdrant.SearchHTTP(c.Context(), vector, 10)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "search error: "+err.Error())
+	}
+
+	var response []map[string]interface{}
+
+	for _, r := range results {
+		response = append(response, map[string]interface{}{
+			"id":    r.ID,
+			"score": r.Score,
+			"item":  r.Payload,
+		})
+	}
+
+	return c.JSON(response)
+}
