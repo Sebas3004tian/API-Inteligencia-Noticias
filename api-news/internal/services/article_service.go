@@ -8,11 +8,11 @@ import (
 )
 
 type ArticleService struct {
-	Embeds *EmbedService
-	Qdrant *QdrantService
+	Embeds EmbeddingService
+	Qdrant QdrantVectorService
 }
 
-func NewArticleService(e *EmbedService, q *QdrantService) *ArticleService {
+func NewArticleService(e EmbeddingService, q QdrantVectorService) *ArticleService {
 	return &ArticleService{Embeds: e, Qdrant: q}
 }
 

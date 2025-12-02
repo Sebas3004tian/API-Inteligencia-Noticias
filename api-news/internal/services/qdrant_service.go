@@ -36,12 +36,28 @@ func (s *QdrantService) Insert(vector []float32, payload map[string]string) erro
 	return s.Client.InsertPoint(vector, payload)
 }
 
-func (s *QdrantService) Search(ctx context.Context, vector []float32, limit int) ([]qdrant.QdrantPoint, error) {
+func (s *QdrantService) Search(ctx context.Context, vector []float32, limit int) ([]SearchResult, error) {
 	req := qdrant.QdrantSearchRequest{
 		Vector:      vector,
 		Limit:       limit,
 		WithPayload: true,
 	}
 
-	return s.Client.Search(ctx, req)
+	points, err := s.Client.Search(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]SearchResult, len(points))
+	for i, p := range points {
+		results[i] = SearchResult{
+			ID:      p.ID,
+			Score:   p.Score,
+			Payload: p.Payload,
+		}
+	}
+
+	return results, nil
 }
+
+var _ QdrantVectorService = (*QdrantService)(nil)
