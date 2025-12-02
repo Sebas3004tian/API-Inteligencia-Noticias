@@ -1,3 +1,6 @@
 fastapi
 uvicorn
-sentence-transformers
+pydantic
+onnxruntime
+transformers>=4.34.0
+sentence-transformers>=2.5.1
