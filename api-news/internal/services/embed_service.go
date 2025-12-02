@@ -15,3 +15,5 @@ func NewEmbedService(client embed.EmbeddingClient) *EmbedService {
 func (s *EmbedService) EmbedText(text string) ([]float32, error) {
 	return s.client.GetEmbedding(text)
 }
+
+var _ EmbeddingService = (*EmbedService)(nil)
