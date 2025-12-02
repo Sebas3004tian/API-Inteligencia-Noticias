@@ -9,21 +9,23 @@ import (
 )
 
 type Config struct {
-	EmbeddingURL string
-	QdrantHost   string
-	QdrantPort   int
-	Collection   string
+	EmbeddingURL          string
+	EmbeddingVectorLength int
+	QdrantHost            string
+	QdrantPort            int
+	Collection            string
 }
 
 func Load() *Config {
 	_ = godotenv.Load(".env.api")
 
 	embeddingURL := getEnv("EMBEDDING_SERVICE_URL", "")
+	embeddingVectorLengthStr := getEnv("EMBEDDING_VECTOR_LENGTH", "")
 	qdrantHost := getEnv("QDRANT_HOST", "")
 	qdrantPortStr := getEnv("QDRANT_PORT", "")
 	collection := getEnv("QDRANT_COLLECTION", "articles")
 
-	if embeddingURL == "" || qdrantHost == "" || qdrantPortStr == "" {
+	if embeddingURL == "" || embeddingVectorLengthStr == "" || qdrantHost == "" || qdrantPortStr == "" {
 		log.Fatal("ERROR: Missing required environment variables")
 	}
 
@@ -32,11 +34,17 @@ func Load() *Config {
 		log.Fatalf("QDRANT_PORT must be a number: %v", err)
 	}
 
+	embeddingVectorLength, err := strconv.Atoi(embeddingVectorLengthStr)
+	if err != nil {
+		log.Fatalf("EMBEDDING_VECTOR_LENGTH must be a number: %v", err)
+	}
+
 	return &Config{
-		EmbeddingURL: embeddingURL,
-		QdrantHost:   qdrantHost,
-		QdrantPort:   qdrantPort,
-		Collection:   collection,
+		EmbeddingURL:          embeddingURL,
+		EmbeddingVectorLength: embeddingVectorLength,
+		QdrantHost:            qdrantHost,
+		QdrantPort:            qdrantPort,
+		Collection:            collection,
 	}
 }
 

@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
+import os 
+
+MODEL_NAME = os.getenv("SENTENCE_TRANSFORMER_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 app = FastAPI()
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+model = SentenceTransformer(MODEL_NAME)
 
 class EmbedRequest(BaseModel):
     text: str
