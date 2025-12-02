@@ -3,7 +3,7 @@ import requests
 import uuid
 import time
 
-API_ENDPOINT = "http://localhost:8080/index"
+API_ENDPOINT = "http://localhost:8081/index"
 BATCH_SIZE = 1000
 
 def main():
