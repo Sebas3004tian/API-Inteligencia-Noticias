@@ -28,7 +28,7 @@ func main() {
 	qdrantService := services.NewQdrantService(qdrantClient)
 
 	qdrantConfig := models.CollectionConfig{
-		VectorSize:     384,
+		VectorSize:     cfg.EmbeddingVectorLength,
 		HnswM:          16,
 		HnswEfConst:    100,
 		PayloadIndexes: nil,
