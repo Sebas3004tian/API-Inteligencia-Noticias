@@ -1,0 +1,60 @@
+name: CD Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: yourACR.azurecr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Login to ACR
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # api-news
+      - name: Build & Push api-news
+        run: |
+          docker build -t $REGISTRY/api-news:latest ./api-news
+          docker push $REGISTRY/api-news:latest
+
+      # embedding-service
+      - name: Build & Push embedding-service
+        run: |
+          docker build -t $REGISTRY/embedding-service:latest ./embedding-service
+          docker push $REGISTRY/embedding-service:latest
+
+  terraform-and-k8s:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+
+      # --- Terraform ---
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve
+
+      # --- Deploy to Kubernetes ---
+      - name: Set kubeconfig
+        run: az aks get-credentials --resource-group YOUR-RG --name YOUR-AKS --overwrite-existing
+
+      - name: Apply k8s manifests
+        run: kubectl apply -f k8s/
