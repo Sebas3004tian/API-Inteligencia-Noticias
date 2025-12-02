@@ -1,0 +1,94 @@
+name: CI Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      embed: ${{ steps.filter.outputs.embed }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Detectar cambios por carpeta
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            api:
+              - 'api-news/**'
+            embed:
+              - 'embedding-service/**'
+            infra:
+              - 'infra/**'
+
+  # --- api-news-Go ---
+  api_news:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Instalar dependencias
+        working-directory: api-news
+        run: go mod tidy
+
+      - name: Ejecutar tests
+        working-directory: api-news
+        run: go test ./... -v
+
+      - name: Build Docker para verificar compilación
+        run: docker build -t api-news-test ./api-news
+
+  # --- embedding-service-python ---
+  embed_service:
+    needs: changes
+    if: needs.changes.outputs.embed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install requirements
+        working-directory: embedding-service
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: embedding-service
+        run: pytest -q
+
+      - name: Docker build test
+        run: docker build -t embedding-test ./embedding-service
+
+  # --- infra ---
+  infra_validation:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: infra
+        run: terraform validate
