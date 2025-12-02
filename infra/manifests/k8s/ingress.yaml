@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-news-ingress
+  namespace: api-news
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: REPLACE_HOSTNAME
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-news
+                port:
+                  number: 80
