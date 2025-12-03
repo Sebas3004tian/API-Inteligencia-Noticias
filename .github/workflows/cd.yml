@@ -1,10 +1,9 @@
 name: CD Deployment
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-
 env:
   REGISTRY: newsplatformacr.azurecr.io
 
