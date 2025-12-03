@@ -149,6 +149,13 @@ jobs:
             terraform import module.network.azurerm_virtual_network.vnet /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.Network/virtualNetworks/newsPlatform-vnet || true
           fi
 
+          # Subnet AKS
+          if az network vnet subnet show --name aks-subnet --vnet-name newsPlatform-vnet --resource-group newsPlatform-rg > /dev/null 2>&1; then
+            echo "Importando subnet AKS existente..."
+            terraform import module.network.azurerm_subnet.aks /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.Network/virtualNetworks/newsPlatform-vnet/subnets/aks-subnet || true
+          fi
+
+
 
       - name: Terraform Plan
         working-directory: infra
