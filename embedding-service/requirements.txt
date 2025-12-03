@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-pydantic
-onnxruntime
-transformers>=4.34.0
-sentence-transformers>=2.5.1
+fastapi==0.111.1
+uvicorn[standard]==0.24.0
+numpy==1.27.4
+light-embed==0.0.9
+pydantic==2.6.2
+pytest==7.4.0

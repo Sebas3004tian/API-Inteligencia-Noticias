@@ -70,7 +70,7 @@ jobs:
 
       - name: Run tests
         working-directory: embedding-service
-        run: pytest -q
+        run: pytest -v  
 
       - name: Docker build test
         run: docker build -t embedding-test ./embedding-service
