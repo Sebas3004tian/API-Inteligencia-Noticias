@@ -13,3 +13,12 @@ __pycache__/
 *.pyd
 *.egg-info/
 .eggs/
+terraform.tfvars
+
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+.terraform.lock.hcl
+.terraform/
+infra/.terraform/

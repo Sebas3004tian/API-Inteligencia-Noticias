@@ -19,13 +19,17 @@ type Config struct {
 func Load() *Config {
 	_ = godotenv.Load(".env.api")
 
-	embeddingURL := getEnv("EMBEDDING_SERVICE_URL", "")
+	embeddingURL := getEnv("MY_EMBEDDING_SERVICE_URL", "")
 	embeddingVectorLengthStr := getEnv("EMBEDDING_VECTOR_LENGTH", "")
 	qdrantHost := getEnv("QDRANT_HOST", "")
 	qdrantPortStr := getEnv("QDRANT_PORT", "")
 	collection := getEnv("QDRANT_COLLECTION", "articles")
 
-	if embeddingURL == "" || embeddingVectorLengthStr == "" || qdrantHost == "" || qdrantPortStr == "" {
+	if embeddingURL == "" {
+		log.Fatal("ERROR: Missing embedding service url")
+	}
+
+	if embeddingVectorLengthStr == "" || qdrantHost == "" || qdrantPortStr == "" {
 		log.Fatal("ERROR: Missing required environment variables")
 	}
 

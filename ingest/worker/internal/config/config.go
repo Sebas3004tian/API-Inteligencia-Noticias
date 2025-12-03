@@ -26,7 +26,7 @@ func Load() *Config {
 		GNewsLang:    getEnv("GNEWS_LANG", "es"),
 		GNewsMax:     getEnv("GNEWS_MAX", "10"),
 		GNewsCountry: getEnv("GNEWS_COUNTRY", "co"),
-		ApiEndpoint:  getEnv("API_ENDPOINT", "http://localhost:8080/index"),
+		ApiEndpoint:  getEnv("API_ENDPOINT", "http://localhost:8081/index"),
 	}
 }
 
