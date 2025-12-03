@@ -161,6 +161,12 @@ jobs:
             terraform import module.aks.azurerm_kubernetes_cluster.aks /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.ContainerService/managedClusters/newsPlatform-aks || true
           fi
 
+          # Role Assignment AKS -> ACR
+          if az role assignment list --assignee 91e241bd-764e-4f57-b7ec-476f7accaa34 --scope /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.ContainerRegistry/registries/newsPlatformacr --query "[].id" -o tsv | grep . > /dev/null 2>&1; then
+            echo "Importando role assignment existente (AKS -> ACR)..."
+            ROLE_ID=$(az role assignment list --assignee 91e241bd-764e-4f57-b7ec-476f7accaa34 --scope /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.ContainerRegistry/registries/newsPlatformacr --query "[].id" -o tsv)
+            terraform import azurerm_role_assignment.aks_acr_pull "$ROLE_ID" || true
+          fi
 
 
       - name: Terraform Plan
