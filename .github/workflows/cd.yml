@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  REGISTRY: yourACR.azurecr.io
+  REGISTRY: newsplatformacr.azurecr.io
 
 jobs:
   build-and-push:
@@ -22,17 +22,39 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # api-news
+      # --- api-news ---
       - name: Build & Push api-news
         run: |
-          docker build -t $REGISTRY/api-news:latest ./api-news
+          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news --query "sort(@)[-1]" -o tsv || echo "0")
+          if [[ -z "$LAST_TAG" ]]; then
+            LAST_TAG=0
+          fi
+          NEW_TAG=$((LAST_TAG + 1))
+          echo "Building api-news with tag $NEW_TAG"
+
+          docker build -t $REGISTRY/api-news:$NEW_TAG ./api-news
+          docker push $REGISTRY/api-news:$NEW_TAG
+
+          docker tag $REGISTRY/api-news:$NEW_TAG $REGISTRY/api-news:latest
           docker push $REGISTRY/api-news:latest
 
-      # embedding-service
+      # --- embedding-service ---
       - name: Build & Push embedding-service
         run: |
-          docker build -t $REGISTRY/embedding-service:latest ./embedding-service
+          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service --query "sort(@)[-1]" -o tsv || echo "0")
+          if [[ -z "$LAST_TAG" ]]; then
+            LAST_TAG=0
+          fi
+          NEW_TAG=$((LAST_TAG + 1))
+          echo "Building embedding-service with tag $NEW_TAG"
+
+          docker build -t $REGISTRY/embedding-service:$NEW_TAG ./embedding-service
+          docker push $REGISTRY/embedding-service:$NEW_TAG
+
+          docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
           docker push $REGISTRY/embedding-service:latest
+
+
 
   terraform-and-k8s:
     needs: build-and-push
@@ -54,7 +76,7 @@ jobs:
 
       # --- Deploy to Kubernetes ---
       - name: Set kubeconfig
-        run: az aks get-credentials --resource-group YOUR-RG --name YOUR-AKS --overwrite-existing
+        run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Apply k8s manifests
-        run: kubectl apply -f k8s/
+        run: kubectl apply -f infra/k8s/
