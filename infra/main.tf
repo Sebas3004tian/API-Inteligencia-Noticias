@@ -63,9 +63,3 @@ module "aks" {
   subnet_id         = module.network.aks_subnet_id
   acr_id            = module.acr.acr_id
 }
-
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = module.aks.kubelet_object_id
-  role_definition_name = "AcrPull"
-  scope                = module.acr.acr_id
-}
