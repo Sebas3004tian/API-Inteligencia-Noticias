@@ -1,0 +1,146 @@
+name: CD Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: newsplatformacr.azurecr.io
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      embed: ${{ steps.filter.outputs.embed }}
+      infra: ${{ steps.filter.outputs.infra }}
+      manifests: ${{ steps.filter.outputs.manifests }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Detectar cambios por carpeta
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            api:
+              - 'api-news/**'
+            embed:
+              - 'embedding-service/**'
+            infra:
+              - 'infra/**'
+            manifests:
+              - 'manifests/**'
+
+  # --- api-news ---
+  api_news:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & Push api-news
+        run: |
+          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news -o tsv | grep -E '^[0-9]+$')
+          if [[ -z "$TAGS" ]]; then
+            NEW_TAG=1
+          else
+            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            NEW_TAG=$((MAX_TAG + 1))
+          fi
+          echo "Building api-news with tag $NEW_TAG"
+
+          docker build -t $REGISTRY/api-news:$NEW_TAG ./api-news
+          docker push $REGISTRY/api-news:$NEW_TAG
+
+          docker tag $REGISTRY/api-news:$NEW_TAG $REGISTRY/api-news:latest
+          docker push $REGISTRY/api-news:latest
+
+  # --- embedding-service ---
+  embed_service:
+    needs: changes
+    if: needs.changes.outputs.embed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & Push embedding-service
+        run: |
+          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service -o tsv | grep -E '^[0-9]+$')
+          if [[ -z "$TAGS" ]]; then
+            NEW_TAG=1
+          else
+            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            NEW_TAG=$((MAX_TAG + 1))
+          fi
+          echo "Building embedding-service with tag $NEW_TAG"
+
+          docker build -t $REGISTRY/embedding-service:$NEW_TAG ./embedding-service
+          docker push $REGISTRY/embedding-service:$NEW_TAG
+
+          docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
+          docker push $REGISTRY/embedding-service:latest
+
+  # --- Terraform y Kubernetes ---
+  terraform_and_k8s:
+    needs: [changes, api_news, embed_service]
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.manifests == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        working-directory: infra
+        if: needs.changes.outputs.infra == 'true'
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra
+        if: needs.changes.outputs.infra == 'true'
+        run: terraform apply -auto-approve tfplan
+
+      - name: Set kubeconfig
+        if: needs.changes.outputs.manifests == 'true'
+        run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
+
+      - name: Apply k8s manifests
+        if: needs.changes.outputs.manifests == 'true'
+        run: kubectl apply -f manifests/k8s/
