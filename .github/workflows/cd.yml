@@ -144,3 +144,15 @@ jobs:
       - name: Apply k8s manifests
         if: needs.changes.outputs.manifests == 'true'
         run: kubectl apply -f manifests/k8s/
+
+      - name: Rollout Restart for API-News
+        if: always() && (needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true')
+        run: |
+          echo "Forzando Rollout Restart de api-news para usar la nueva imagen :latest"
+          kubectl rollout restart deployment api-news -n news-platform
+
+      - name: Rollout Restart for Embedding Service
+        if: always() && (needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true')
+        run: |
+          echo "Forzando Rollout Restart de embedding-service para usar la nueva imagen :latest"
+          kubectl rollout restart deployment embedding-service -n news-platform
