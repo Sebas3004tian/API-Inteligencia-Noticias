@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Sebas3004tian/api-news/internal/clients/qdrant"
+	"github.com/Sebas3004tian/api-news/internal/http/dto"
 	"github.com/Sebas3004tian/api-news/internal/models"
 )
 
@@ -58,6 +59,52 @@ func (s *QdrantService) Search(ctx context.Context, vector []float32, limit int)
 	}
 
 	return results, nil
+}
+
+func (s *QdrantService) SearchByVectorAndSource(vector []float32, source string, limit int) ([]dto.ArticleWithScore, error) {
+	filter := map[string]interface{}{
+		"must": []map[string]interface{}{
+			{
+				"key": "source_name",
+				"match": map[string]string{
+					"value": source,
+				},
+			},
+		},
+	}
+
+	req := qdrant.QdrantSearchRequest{
+		Vector:      vector,
+		Limit:       limit,
+		WithPayload: true,
+		Filter:      &filter,
+	}
+
+	points, err := s.Client.Search(context.Background(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	articles := make([]dto.ArticleWithScore, len(points))
+	for i, p := range points {
+		payload := p.Payload
+		articles[i] = dto.ArticleWithScore{
+			Article: models.Article{
+				ID:          p.ID,
+				Title:       payload["title"],
+				Description: payload["description"],
+				Content:     payload["content"],
+				Url:         payload["url"],
+				Image:       payload["image"],
+				PublishedAt: payload["publishedAt"],
+				SourceName:  payload["source_name"],
+				SourceURL:   payload["sourceUrl"],
+			},
+			Score: p.Score,
+		}
+	}
+
+	return articles, nil
 }
 
 var _ QdrantVectorService = (*QdrantService)(nil)

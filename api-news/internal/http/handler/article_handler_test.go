@@ -13,6 +13,7 @@ import (
 
 	"net/url"
 
+	"github.com/Sebas3004tian/api-news/internal/http/dto"
 	"github.com/Sebas3004tian/api-news/internal/http/handler"
 	"github.com/Sebas3004tian/api-news/internal/models"
 	"github.com/Sebas3004tian/api-news/internal/services"
@@ -37,6 +38,11 @@ func (m *MockQdrantService) Search(ctx context.Context, vector []float32, limit 
 	return args.Get(0).([]services.SearchResult), args.Error(1)
 }
 
+func (m *MockQdrantService) SearchByVectorAndSource(vector []float32, source string, limit int) ([]dto.ArticleWithScore, error) {
+	args := m.Called(vector, source, limit)
+	return args.Get(0).([]dto.ArticleWithScore), args.Error(1)
+}
+
 func TestArticleHandler_Index_Unit(t *testing.T) {
 	mockEmb := new(MockEmbedService)
 	mockQ := new(MockQdrantService)
@@ -54,7 +60,8 @@ func TestArticleHandler_Index_Unit(t *testing.T) {
 	mockQ.On("Insert", []float32{0.1, 0.2, 0.3}, mock.Anything).Return(nil)
 
 	articleService := services.NewArticleService(mockEmb, mockQ)
-	h := handler.NewArticleHandler(articleService)
+	h := handler.NewArticleHandler(articleService, mockEmb, mockQ)
+
 	app := fiber.New()
 	app.Post("/index", h.Index)
 
@@ -78,7 +85,8 @@ func TestArticleHandler_Search_Unit(t *testing.T) {
 	}, nil)
 
 	articleService := services.NewArticleService(mockEmb, mockQ)
-	h := handler.NewArticleHandler(articleService)
+	h := handler.NewArticleHandler(articleService, mockEmb, mockQ)
+
 	app := fiber.New()
 	app.Get("/search", h.Search)
 

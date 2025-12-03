@@ -9,4 +9,6 @@ func SetupRoutes(app *fiber.App, articleHandler *handler.ArticleHandler, healthH
 	app.Post("/index", articleHandler.Index)
 	app.Get("/search", articleHandler.Search)
 	app.Get("/", healthHandler.Health)
+	app.Get("/analysis/perspective", articleHandler.PerspectiveAnalysis)
+
 }
