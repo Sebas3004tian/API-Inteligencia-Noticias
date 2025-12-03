@@ -51,9 +51,14 @@ func (s *QdrantService) Search(ctx context.Context, vector []float32, limit int)
 
 	results := make([]SearchResult, len(points))
 	for i, p := range points {
+		score := 0.0
+		if p.Score != nil {
+			score = *p.Score
+		}
+
 		results[i] = SearchResult{
 			ID:      p.ID,
-			Score:   p.Score,
+			Score:   score,
 			Payload: p.Payload,
 		}
 	}
@@ -87,20 +92,77 @@ func (s *QdrantService) SearchByVectorAndSource(vector []float32, source string,
 
 	articles := make([]dto.ArticleWithScore, len(points))
 	for i, p := range points {
-		payload := p.Payload
+		score := 0.0
+		if p.Score != nil {
+			score = *p.Score
+		}
+
+		pl := p.Payload
+
 		articles[i] = dto.ArticleWithScore{
 			Article: models.Article{
 				ID:          p.ID,
-				Title:       payload["title"],
-				Description: payload["description"],
-				Content:     payload["content"],
-				Url:         payload["url"],
-				Image:       payload["image"],
-				PublishedAt: payload["publishedAt"],
-				SourceName:  payload["source_name"],
-				SourceURL:   payload["sourceUrl"],
+				Title:       pl["title"],
+				Description: pl["description"],
+				Content:     pl["content"],
+				Url:         pl["url"],
+				Image:       pl["image"],
+				PublishedAt: pl["published_at"],
+				SourceName:  pl["source_name"],
+				SourceURL:   pl["source_url"],
 			},
-			Score: p.Score,
+			Score: score,
+		}
+	}
+
+	return articles, nil
+}
+
+func (s *QdrantService) GetAllSources(ctx context.Context) ([]string, error) {
+	body := map[string]interface{}{
+		"limit":        5000,
+		"with_payload": true,
+	}
+
+	points, err := s.Client.Scroll(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+
+	unique := map[string]struct{}{}
+	for _, p := range points {
+		if src, ok := p.Payload["source_name"]; ok {
+			unique[src] = struct{}{}
+		}
+	}
+
+	var sources []string
+	for src := range unique {
+		sources = append(sources, src)
+	}
+
+	return sources, nil
+}
+
+func (s *QdrantService) GetArticlesBySourceName(ctx context.Context, source string) ([]models.Article, error) {
+	points, err := s.Client.GetBySourceName(ctx, source)
+	if err != nil {
+		return nil, err
+	}
+
+	articles := make([]models.Article, len(points))
+	for i, p := range points {
+		pl := p.Payload
+		articles[i] = models.Article{
+			ID:          p.ID,
+			Title:       pl["title"],
+			Description: pl["description"],
+			Content:     pl["content"],
+			Url:         pl["url"],
+			Image:       pl["image"],
+			PublishedAt: pl["published_at"],
+			SourceName:  pl["source_name"],
+			SourceURL:   pl["source_url"],
 		}
 	}
 

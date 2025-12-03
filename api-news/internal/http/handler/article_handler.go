@@ -66,7 +66,6 @@ func (h *ArticleHandler) PerspectiveAnalysis(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	// Generar embedding de la consulta
 	queryVector, err := h.EmbedService.EmbedText(req.Query)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "embedding failed")
@@ -75,13 +74,11 @@ func (h *ArticleHandler) PerspectiveAnalysis(c *fiber.Ctx) error {
 	var results []dto.PerspectiveResponseItem
 
 	for _, source := range req.Sources {
-		// Buscar artículos filtrando por fuente
 		articles, err := h.QdrantService.SearchByVectorAndSource(queryVector, source, 10)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "search failed")
 		}
 
-		// Aquí `articles` es ahora []dto.ArticleWithScore
 		var sum float64
 		for _, a := range articles {
 			sum += a.Score
@@ -99,4 +96,23 @@ func (h *ArticleHandler) PerspectiveAnalysis(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(dto.PerspectiveResponse{Summary: results})
+}
+
+func (h *ArticleHandler) GetSources(c *fiber.Ctx) error {
+	sources, err := h.QdrantService.GetAllSources(c.Context())
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(sources)
+}
+
+func (h *ArticleHandler) GetArticlesBySource(c *fiber.Ctx) error {
+	source := c.Params("source")
+
+	articles, err := h.QdrantService.GetArticlesBySourceName(c.Context(), source)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(articles)
 }
