@@ -1,3 +1,8 @@
+Una vez ejecutado todos los scripts tendremos nuestra ip publica:
+![screenshot](../doc/screenshot.png)
+
+
+
 # Deploy de la Plataforma de Noticias en Azure
 
 Este proyecto utiliza **Terraform**, **Docker**, **Azure Container Registry (ACR)** y **Azure Kubernetes Service (AKS)** para desplegar una arquitectura completa en la nube.
