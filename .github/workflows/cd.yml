@@ -50,18 +50,19 @@ jobs:
 
       - name: Build & Push api-news
         run: |
-          # Obtener último tag numérico (ignorando latest)
-          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news --query "sort([?@!='latest'])[-1]" -o tsv || echo "0")
-          if [[ -z "$LAST_TAG" ]]; then
-            LAST_TAG=0
+          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news -o tsv | grep -E '^[0-9]+$' || echo "")
+          if [[ -z "$TAGS" ]]; then
+            NEW_TAG=1
+          else
+            # Calcular el max y sumarle 1
+            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            NEW_TAG=$((MAX_TAG + 1))
           fi
-          NEW_TAG=$((LAST_TAG + 1))
-          echo "Building api-news with tag $NEW_TAG"
 
+          echo "Building api-news with tag $NEW_TAG"
           docker build -t $REGISTRY/api-news:$NEW_TAG ./api-news
           docker push $REGISTRY/api-news:$NEW_TAG
 
-          # Actualizar latest
           docker tag $REGISTRY/api-news:$NEW_TAG $REGISTRY/api-news:latest
           docker push $REGISTRY/api-news:latest
 
@@ -82,13 +83,16 @@ jobs:
 
       - name: Build & Push embedding-service
         run: |
-          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service --query "sort([?@!='latest'])[-1]" -o tsv || echo "0")
-          if [[ -z "$LAST_TAG" ]]; then
-            LAST_TAG=0
+          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service -o tsv | grep -E '^[0-9]+$' || echo "")
+          if [[ -z "$TAGS" ]]; then
+            NEW_TAG=1
+          else
+            # Calcular el max y sumarle 1
+            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            NEW_TAG=$((MAX_TAG + 1))
           fi
-          NEW_TAG=$((LAST_TAG + 1))
-          echo "Building embedding-service with tag $NEW_TAG"
 
+          echo "Building embedding-service with tag $NEW_TAG"
           docker build -t $REGISTRY/embedding-service:$NEW_TAG ./embedding-service
           docker push $REGISTRY/embedding-service:$NEW_TAG
 
@@ -103,6 +107,12 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v3
+
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - uses: hashicorp/setup-terraform@v2
 
