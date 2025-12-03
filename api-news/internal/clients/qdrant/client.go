@@ -47,7 +47,11 @@ func (c *Client) InsertPoint(vector []float32, payload map[string]string) error 
 
 	body := map[string]interface{}{
 		"points": []map[string]interface{}{
-			{"id": uuid.New().String(), "vector": vector, "payload": payload},
+			{
+				"id":      uuid.New().String(),
+				"vector":  vector,
+				"payload": payload,
+			},
 		},
 	}
 
@@ -75,8 +79,10 @@ func (c *Client) Search(ctx context.Context, reqBody QdrantSearchRequest) ([]Qdr
 		return nil, err
 	}
 
-	url := fmt.Sprintf("http://%s:%d/collections/%s/points/search",
-		c.Host, c.Port, c.Collection)
+	url := fmt.Sprintf(
+		"http://%s:%d/collections/%s/points/search",
+		c.Host, c.Port, c.Collection,
+	)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
@@ -100,4 +106,85 @@ func (c *Client) Search(ctx context.Context, reqBody QdrantSearchRequest) ([]Qdr
 	}
 
 	return searchResp.Result, nil
+}
+
+func (c *Client) GetBySourceName(ctx context.Context, source string) ([]QdrantPoint, error) {
+	url := fmt.Sprintf(
+		"http://%s:%d/collections/%s/points/scroll",
+		c.Host, c.Port, c.Collection,
+	)
+
+	filter := map[string]interface{}{
+		"must": []map[string]interface{}{
+			{
+				"key": "source_name",
+				"match": map[string]interface{}{
+					"value": source,
+				},
+			},
+		},
+	}
+
+	body := map[string]interface{}{
+		"with_payload": true,
+		"limit":        500,
+		"filter":       filter,
+	}
+
+	bodyBytes, _ := json.Marshal(body)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("scroll failed: HTTP %d", resp.StatusCode)
+	}
+
+	var scrollResp QdrantScrollResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scrollResp); err != nil {
+		return nil, err
+	}
+
+	return scrollResp.Result.Points, nil
+}
+
+func (c *Client) Scroll(ctx context.Context, body map[string]interface{}) ([]QdrantPoint, error) {
+	url := fmt.Sprintf(
+		"http://%s:%d/collections/%s/points/scroll",
+		c.Host, c.Port, c.Collection,
+	)
+
+	bodyBytes, _ := json.Marshal(body)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("scroll failed: HTTP %d", resp.StatusCode)
+	}
+
+	var scrollResp QdrantScrollResponse
+	if err := json.NewDecoder(resp.Body).Decode(&scrollResp); err != nil {
+		return nil, err
+	}
+
+	return scrollResp.Result.Points, nil
 }

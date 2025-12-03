@@ -39,11 +39,11 @@ func main() {
 	articleService := services.NewArticleService(embedService, qdrantService)
 
 	// Handlers
-	articleHandler := handler.NewArticleHandler(articleService)
-	healthHandler	:= handler.NewHealthHandler()
+	articleHandler := handler.NewArticleHandler(articleService, embedService, qdrantService)
+	healthHandler := handler.NewHealthHandler()
 
 	// Routes
-	apiHttp.SetupRoutes(app, articleHandler,healthHandler)
+	apiHttp.SetupRoutes(app, articleHandler, healthHandler)
 
 	log.Println("Servidor iniciado en :8081")
 	log.Fatal(app.Listen(":8081"))
