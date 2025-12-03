@@ -81,14 +81,19 @@ jobs:
     if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-      - uses: hashicorp/setup-terraform@v2
+    - name: Azure CLI Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Terraform Init
-        working-directory: infra
-        run: terraform init -input=false
+    - uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Validate
-        working-directory: infra
-        run: terraform validate
+    - name: Terraform Init
+      working-directory: infra
+      run: terraform init -input=false
+
+    - name: Terraform Validate
+      working-directory: infra
+      run: terraform validate
