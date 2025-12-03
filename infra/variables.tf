@@ -17,3 +17,8 @@ variable "aks_vm_size" {
   type    = string
   default = "Standard_B2s"
 }
+
+variable "rg_name"{
+  type    = string
+  default = "newsPlatform-rg"
+}

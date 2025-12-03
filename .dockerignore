@@ -1,0 +1,36 @@
+# entornos virtuales
+venv/
+.venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# git
+.git/
+.gitignore
+
+# logs
+*.log
+logs/
+
+# node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# modelos o archivos pesados
+*.bin
+*.pt
+*.onnx
+*.pickle
+*.pkl
+models/
+data/
+datasets/
+
+# cosas de Docker
+Dockerfile
+docker-compose.yml
