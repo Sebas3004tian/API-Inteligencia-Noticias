@@ -11,7 +11,8 @@ type QdrantSearchRequest struct {
 type QdrantPoint struct {
 	ID      string            `json:"id"`
 	Payload map[string]string `json:"payload"`
-	Score   float64           `json:"score"`
+	Vector  []float32         `json:"vector,omitempty"`
+	Score   *float64          `json:"score,omitempty"`
 }
 
 type QdrantSearchResponse struct {
@@ -20,4 +21,11 @@ type QdrantSearchResponse struct {
 
 type QdrantSearchParams struct {
 	HnswEf int `json:"hnsw_ef,omitempty"`
+}
+
+type QdrantScrollResponse struct {
+	Result struct {
+		Points         []QdrantPoint `json:"points"`
+		NextPageOffset interface{}   `json:"next_page_offset"`
+	} `json:"result"`
 }
