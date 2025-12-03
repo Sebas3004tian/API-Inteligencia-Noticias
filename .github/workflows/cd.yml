@@ -166,7 +166,6 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
       - name: Set kubeconfig
-        if: needs.changes.outputs.manifests == 'true'
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Apply k8s manifests
