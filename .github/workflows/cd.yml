@@ -155,6 +155,12 @@ jobs:
             terraform import module.network.azurerm_subnet.aks /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.Network/virtualNetworks/newsPlatform-vnet/subnets/aks-subnet || true
           fi
 
+          # AKS Cluster
+          if az aks show --name newsPlatform-aks --resource-group newsPlatform-rg > /dev/null 2>&1; then
+            echo "Importando AKS cluster existente..."
+            terraform import module.aks.azurerm_kubernetes_cluster.aks /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.ContainerService/managedClusters/newsPlatform-aks || true
+          fi
+
 
 
       - name: Terraform Plan
