@@ -4,27 +4,54 @@ on:
   pull_request:
     branches:
       - main
+
 env:
   REGISTRY: newsplatformacr.azurecr.io
 
 jobs:
-  build-and-push:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      embed: ${{ steps.filter.outputs.embed }}
+      infra: ${{ steps.filter.outputs.infra }}
+      manifests: ${{ steps.filter.outputs.manifests }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Detectar cambios por carpeta
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            api:
+              - 'api-news/**'
+            embed:
+              - 'embedding-service/**'
+            infra:
+              - 'infra/**'
+            manifests:
+              - 'manifests/**'
+
+  # --- api-news ---
+  api_news:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      # Login to ACR
-      - name: Login to Azure Container Registry
+      - name: Login to ACR
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # --- api-news ---
       - name: Build & Push api-news
         run: |
-          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news --query "sort(@)[-1]" -o tsv || echo "0")
+          # Obtener último tag numérico (ignorando latest)
+          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news --query "sort([?@!='latest'])[-1]" -o tsv || echo "0")
           if [[ -z "$LAST_TAG" ]]; then
             LAST_TAG=0
           fi
@@ -34,13 +61,28 @@ jobs:
           docker build -t $REGISTRY/api-news:$NEW_TAG ./api-news
           docker push $REGISTRY/api-news:$NEW_TAG
 
+          # Actualizar latest
           docker tag $REGISTRY/api-news:$NEW_TAG $REGISTRY/api-news:latest
           docker push $REGISTRY/api-news:latest
 
-      # --- embedding-service ---
+  # --- embedding-service ---
+  embed_service:
+    needs: changes
+    if: needs.changes.outputs.embed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build & Push embedding-service
         run: |
-          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service --query "sort(@)[-1]" -o tsv || echo "0")
+          LAST_TAG=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service --query "sort([?@!='latest'])[-1]" -o tsv || echo "0")
           if [[ -z "$LAST_TAG" ]]; then
             LAST_TAG=0
           fi
@@ -53,10 +95,10 @@ jobs:
           docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
           docker push $REGISTRY/embedding-service:latest
 
-
-
-  terraform-and-k8s:
-    needs: build-and-push
+  # --- Terraform ---
+  terraform_and_k8s:
+    needs: [changes, api_news, embed_service]
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.manifests == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -64,23 +106,24 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v2
 
-      # --- Terraform ---
       - name: Terraform Init
         working-directory: infra
         run: terraform init -input=false
 
       - name: Terraform Plan
         working-directory: infra
+        if: needs.changes.outputs.infra == 'true'
         run: terraform plan -out=tfplan
-
 
       - name: Terraform Apply
         working-directory: infra
+        if: needs.changes.outputs.infra == 'true'
         run: terraform apply -auto-approve tfplan
 
-      # --- Deploy to Kubernetes ---
       - name: Set kubeconfig
+        if: needs.changes.outputs.manifests == 'true'
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Apply k8s manifests
+        if: needs.changes.outputs.manifests == 'true'
         run: kubectl apply -f manifests/k8s/
