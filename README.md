@@ -63,7 +63,7 @@ El embedding-service está construido sobre **FastAPI + Sentence Transformers**.
 
 ---
 
-# Ejecutar el Proyecto en Local (proceso actual)
+# Ejecutar el Proyecto en Local
 
 ### Levantar Qdrant (WSL / Docker)
 ```bash
@@ -151,3 +151,28 @@ Devuelve artículos más similares según embeddings almacenados.
 ]
 
 ```
+# Actualmente
+El proyecto cuenta con dos pipelines CI y CD:
+
+## GitHub Actions (CI/CD)
+
+### CI:
+
+- Compila los servicios (api-news y embedding-service)
+- Ejecuta pruebas
+- Genera las imágenes Docker para comprobar
+
+### CD:
+
+- Hace push de imágenes al ACR
+
+- Actualiza la infraestructura
+
+- Aplica los manifests
+
+Todo teniendo en cuenta si sufrio o no modificacion.
+
+# Diagrama de la infraestructura actual
+
+![Infraestructura](./doc/diagram-infra.png)
+

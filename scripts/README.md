@@ -1,5 +1,6 @@
 Una vez ejecutado todos los scripts tendremos nuestra ip publica:
-![alt text](image.png)
+![screenshot](../doc/screenshot.png)
+
 
 
 # Deploy de la Plataforma de Noticias en Azure
