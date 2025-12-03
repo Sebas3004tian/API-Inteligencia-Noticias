@@ -69,13 +69,18 @@ jobs:
         working-directory: infra
         run: terraform init -input=false
 
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan -out=tfplan
+
+
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
 
       # --- Deploy to Kubernetes ---
       - name: Set kubeconfig
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Apply k8s manifests
-        run: kubectl apply -f infra/k8s/
+        run: kubectl apply -f manifests/k8s/
