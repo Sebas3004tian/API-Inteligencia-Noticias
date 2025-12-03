@@ -5,7 +5,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, articleHandler *handler.ArticleHandler) {
+func SetupRoutes(app *fiber.App, articleHandler *handler.ArticleHandler, healthHandler *handler.HealthHandler) {
 	app.Post("/index", articleHandler.Index)
 	app.Get("/search", articleHandler.Search)
+	app.Get("/", healthHandler.Health)
 }

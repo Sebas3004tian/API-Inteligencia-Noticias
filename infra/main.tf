@@ -1,28 +1,72 @@
-module "rg" {
-  source   = "./modules/resource_group"
-  name     = var.resource_group_name
+terraform {
+  required_version = ">= 1.4.0"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.80"
+    }
+  }
+
+  # Opcional:
+  # backend "azurerm" {
+  #   resource_group_name  = "rg-tfstate"
+  #   storage_account_name = "tfstateaccount123"
+  #   container_name       = "tfstate"
+  #   key                  = "infra.tfstate"
+  # }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+# ----------------------
+# RESOURCE GROUP
+# ----------------------
+resource "azurerm_resource_group" "rg" {
+  name     = "${var.project_name}-rg"
   location = var.location
 }
 
+# ----------------------
+# NETWORK MODULE
+# ----------------------
 module "network" {
-  source              = "./modules/network"
-  location            = var.location
-  resource_group_name = module.rg.name
+  project_name = var.project_name
+  source            = "./modules/network"
+  resource_group    = azurerm_resource_group.rg.name
+  location          = var.location
+  vnet_cidr         = "10.0.0.0/16"
+  aks_subnet_cidr   = "10.0.1.0/24"
 }
 
+# ----------------------
+# ACR MODULE
+# ----------------------
 module "acr" {
-  source              = "./modules/acr"
-  resource_group_name = module.rg.name
-  location            = var.location
-  acr_name            = var.acr_name
-  sku                 = "Basic"
+  source         = "./modules/acr"
+  resource_group = azurerm_resource_group.rg.name
+  location       = var.location
+  project_name   = var.project_name
 }
 
+# ----------------------
+# AKS MODULE
+# ----------------------
 module "aks" {
-  source              = "./modules/aks"
-  resource_group_name = module.rg.name
-  location            = var.location
-  cluster_name        = var.cluster_name
-  node_count          = var.node_count
-  acr_id              = module.acr.id
+  source            = "./modules/aks"
+  resource_group    = azurerm_resource_group.rg.name
+  location          = var.location
+  project_name      = var.project_name
+  node_count        = var.aks_node_count
+  node_vm_size      = var.aks_vm_size
+  subnet_id         = module.network.aks_subnet_id
+  acr_id            = module.acr.acr_id
+}
+
+resource "azurerm_role_assignment" "aks_acr_pull" {
+  principal_id         = module.aks.kubelet_object_id
+  role_definition_name = "AcrPull"
+  scope                = module.acr.acr_id
 }

@@ -1,10 +1,9 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: qdrant
-  namespace: api-news
+  namespace: news-platform
 spec:
-  serviceName: "qdrant"
   replicas: 1
   selector:
     matchLabels:
@@ -23,25 +22,23 @@ spec:
           volumeMounts:
             - name: qdrant-storage
               mountPath: /qdrant/storage
-  volumeClaimTemplates:
-    - metadata:
-        name: qdrant-storage
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 10Gi
+      volumes:
+        - name: qdrant-storage
+          emptyDir: {}  
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: qdrant
-  namespace: api-news
+  namespace: news-platform
 spec:
+  type: ClusterIP
   selector:
     app: qdrant
   ports:
-    - protocol: TCP
+    - name: api
       port: 6333
       targetPort: 6333
-  type: ClusterIP
+    - name: grpc
+      port: 6334
+      targetPort: 6334

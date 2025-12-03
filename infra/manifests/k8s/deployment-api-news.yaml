@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-news
-  namespace: api-news
+  namespace: news-platform
 spec:
   replicas: 1
   selector:
@@ -15,30 +15,33 @@ spec:
     spec:
       containers:
         - name: api-news
-          image: REPLACE_ACR/api-news:latest
+          image: newsplatformacr.azurecr.io/api-news:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8081
+            - containerPort: 8081   
           env:
-            - name: EMBEDDING_SERVICE_URL
+            - name: MY_EMBEDDING_SERVICE_URL
               value: "http://embedding-service:9000"
             - name: QDRANT_HOST
               value: "qdrant"
             - name: QDRANT_PORT
               value: "6333"
+            - name: EMBEDDING_VECTOR_LENGTH
+              value: "384"
             - name: QDRANT_COLLECTION
               value: "articles"
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: api-news
-  namespace: api-news
+  namespace: news-platform
 spec:
+  type: ClusterIP
   selector:
     app: api-news
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8081
-  type: ClusterIP
+    - port: 80
+      targetPort: 8081   
+

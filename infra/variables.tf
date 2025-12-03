@@ -1,7 +1,6 @@
-variable "resource_group_name" {
+variable "project_name" {
   type        = string
-  description = "Resource Group name"
-  default     = "rg-api-news"
+  description = "Project prefix"
 }
 
 variable "location" {
@@ -9,22 +8,12 @@ variable "location" {
   default = "eastus"
 }
 
-variable "acr_name" {
-  type    = string
-  default = "myaCRname12345" # replace
-}
-
-variable "acr_sku" {
-  type    = string
-  default = "Basic"
-}
-
-variable "cluster_name" {
-  type    = string
-  default = "aks-api-news"
-}
-
-variable "node_count" {
+variable "aks_node_count" {
   type    = number
   default = 1
+}
+
+variable "aks_vm_size" {
+  type    = string
+  default = "Standard_B2s"
 }
