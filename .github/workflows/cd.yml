@@ -55,13 +55,26 @@ jobs:
 
       - name: Build & Push api-news
         run: |
-          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository api-news -o tsv | grep -E '^[0-9]+$')
-          if [[ -z "$TAGS" ]]; then
+          ALL_TAGS=$(az acr repository show-tags \
+              --name ${REGISTRY%%.*} \
+              --repository api-news \
+              -o tsv || true)
+
+          NUMERIC_TAGS=$(echo "$ALL_TAGS" | grep -E '^[0-9]+$' || true)
+
+          if [[ -z "$ALL_TAGS" ]]; then
+            echo "No hay ningún tag (ni latest ni numéricos). Se creará el tag 1."
+            NEW_TAG=1
+          elif [[ -z "$NUMERIC_TAGS" ]]; then
+            echo "Solo existe 'latest' (o no hay tags numéricos). Se creará el tag 1."
             NEW_TAG=1
           else
-            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            MAX_TAG=$(echo "$NUMERIC_TAGS" | sort -n | tail -1)
             NEW_TAG=$((MAX_TAG + 1))
+            echo "Último tag numérico encontrado: $MAX_TAG"
+            echo "Nuevo tag: $NEW_TAG"
           fi
+
           echo "Building api-news with tag $NEW_TAG"
 
           docker build -t $REGISTRY/api-news:$NEW_TAG ./api-news
@@ -69,6 +82,7 @@ jobs:
 
           docker tag $REGISTRY/api-news:$NEW_TAG $REGISTRY/api-news:latest
           docker push $REGISTRY/api-news:latest
+
 
   # --- embedding-service ---
   embed_service:
@@ -92,13 +106,26 @@ jobs:
 
       - name: Build & Push embedding-service
         run: |
-          TAGS=$(az acr repository show-tags --name ${REGISTRY%%.*} --repository embedding-service -o tsv | grep -E '^[0-9]+$')
-          if [[ -z "$TAGS" ]]; then
+          ALL_TAGS=$(az acr repository show-tags \
+              --name ${REGISTRY%%.*} \
+              --repository embedding-service \
+              -o tsv || true)
+
+          NUMERIC_TAGS=$(echo "$ALL_TAGS" | grep -E '^[0-9]+$' || true)
+
+          if [[ -z "$ALL_TAGS" ]]; then
+            echo "No hay ningún tag (ni latest ni numéricos). Se creará el tag 1."
+            NEW_TAG=1
+          elif [[ -z "$NUMERIC_TAGS" ]]; then
+            echo "Solo existe 'latest' (o no hay tags numéricos). Se creará el tag 1."
             NEW_TAG=1
           else
-            MAX_TAG=$(echo "$TAGS" | sort -n | tail -1)
+            MAX_TAG=$(echo "$NUMERIC_TAGS" | sort -n | tail -1)
             NEW_TAG=$((MAX_TAG + 1))
+            echo "Último tag numérico encontrado: $MAX_TAG"
+            echo "Nuevo tag: $NEW_TAG"
           fi
+
           echo "Building embedding-service with tag $NEW_TAG"
 
           docker build -t $REGISTRY/embedding-service:$NEW_TAG ./embedding-service
@@ -106,6 +133,7 @@ jobs:
 
           docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
           docker push $REGISTRY/embedding-service:latest
+
 
   # --- Terraform y Kubernetes ---
   terraform_and_k8s:
@@ -138,9 +166,20 @@ jobs:
         run: terraform apply -auto-approve tfplan
 
       - name: Set kubeconfig
-        if: needs.changes.outputs.manifests == 'true'
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Apply k8s manifests
         if: needs.changes.outputs.manifests == 'true'
         run: kubectl apply -f manifests/k8s/
+
+      - name: Rollout Restart for API-News
+        if: always() && (needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true')
+        run: |
+          echo "Forzando Rollout Restart de api-news para usar la nueva imagen :latest"
+          kubectl rollout restart deployment api-news -n news-platform
+
+      - name: Rollout Restart for Embedding Service
+        if: always() && (needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true')
+        run: |
+          echo "Forzando Rollout Restart de embedding-service para usar la nueva imagen :latest"
+          kubectl rollout restart deployment embedding-service -n news-platform
