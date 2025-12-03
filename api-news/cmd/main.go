@@ -40,10 +40,11 @@ func main() {
 
 	// Handlers
 	articleHandler := handler.NewArticleHandler(articleService)
+	healthHandler	:= handler.NewHealthHandler()
 
 	// Routes
-	apiHttp.SetupRoutes(app, articleHandler)
+	apiHttp.SetupRoutes(app, articleHandler,healthHandler)
 
-	log.Println("Servidor iniciado en :8080")
-	log.Fatal(app.Listen(":8080"))
+	log.Println("Servidor iniciado en :8081")
+	log.Fatal(app.Listen(":8081"))
 }

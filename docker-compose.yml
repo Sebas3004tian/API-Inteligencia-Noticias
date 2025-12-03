@@ -40,10 +40,10 @@ services:
       dockerfile: Dockerfile
     container_name: api-news
     ports:
-      - "8080:8080"
+      - "8081:8081"
     restart: always
     environment:
-      EMBEDDING_SERVICE_URL: http://embedding-service:9000
+      MY_EMBEDDING_SERVICE_URL: http://embedding-service:9000
       
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
