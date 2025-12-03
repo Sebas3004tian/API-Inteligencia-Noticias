@@ -127,14 +127,28 @@ jobs:
         working-directory: infra
         run: terraform init -input=false
 
-      - name: Terraform Import Resource Group
+      - name: Terraform Import Resources
         working-directory: infra
         if: needs.changes.outputs.infra == 'true'
         run: |
+          # Resource Group
           if az group show --name newsPlatform-rg > /dev/null 2>&1; then
             echo "Importando resource group existente..."
             terraform import azurerm_resource_group.rg /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg || true
           fi
+
+          # Container Registry (ACR)
+          if az acr show --name newsPlatformacr > /dev/null 2>&1; then
+            echo "Importando ACR existente..."
+            terraform import module.acr.azurerm_container_registry.acr /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.ContainerRegistry/registries/newsPlatformacr || true
+          fi
+
+          # Virtual Network (VNet)
+          if az network vnet show --name newsPlatform-vnet --resource-group newsPlatform-rg > /dev/null 2>&1; then
+            echo "Importando VNet existente..."
+            terraform import module.network.azurerm_virtual_network.vnet /subscriptions/45cf82e3-a6b2-4aa8-a135-26393913d494/resourceGroups/newsPlatform-rg/providers/Microsoft.Network/virtualNetworks/newsPlatform-vnet || true
+          fi
+
 
       - name: Terraform Plan
         working-directory: infra
