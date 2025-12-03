@@ -134,11 +134,9 @@ jobs:
           docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
           docker push $REGISTRY/embedding-service:latest
 
-
-  # --- Terraform y Kubernetes ---
-  terraform_and_k8s:
+  terraform:
     needs: [changes, api_news, embed_service]
-    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.manifests == 'true'
+    if: needs.changes.outputs.infra == 'true' 
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -165,6 +163,19 @@ jobs:
         if: needs.changes.outputs.infra == 'true'
         run: terraform apply -auto-approve tfplan
 
+  k8s_deploy:
+    needs: [changes, api_news, embed_service, terraform]
+    if: |
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.embed == 'true' ||
+      needs.changes.outputs.manifests == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Set kubeconfig
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
@@ -172,14 +183,14 @@ jobs:
         if: needs.changes.outputs.manifests == 'true'
         run: kubectl apply -f manifests/k8s/
 
-      - name: Rollout Restart for API-News
-        if: always() && (needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true')
+      - name: Rollout Restart API-News
+        if: needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true'
         run: |
-          echo "Forzando Rollout Restart de api-news para usar la nueva imagen :latest"
+          echo "Restart API-News"
           kubectl rollout restart deployment api-news -n news-platform
 
-      - name: Rollout Restart for Embedding Service
-        if: always() && (needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true')
+      - name: Rollout Restart Embedding-Service
+        if: needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true'
         run: |
-          echo "Forzando Rollout Restart de embedding-service para usar la nueva imagen :latest"
+          echo "Restart Embedding-Service"
           kubectl rollout restart deployment embedding-service -n news-platform
