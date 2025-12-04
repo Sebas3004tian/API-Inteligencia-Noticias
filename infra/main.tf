@@ -46,3 +46,4 @@ module "aks" {
   subnet_id         = module.network.aks_subnet_id
   acr_id            = module.acr.acr_id
 }
+
