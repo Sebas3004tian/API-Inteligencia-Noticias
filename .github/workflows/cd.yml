@@ -33,6 +33,8 @@ jobs:
             manifests:
               - 'manifests/**'
 
+    
+
   # --- api-news ---
   api_news:
     needs: changes
@@ -45,6 +47,9 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+      - name: Set kubeconfig
+        run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Login to ACR
         uses: azure/docker-login@v1
@@ -84,6 +89,13 @@ jobs:
           docker push $REGISTRY/api-news:latest
 
 
+      - name: Rollout Restart API-News
+        if: needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true'
+        run: |
+          echo "Restart API-News"
+          kubectl rollout restart deployment api-news -n news-platform
+
+
   # --- embedding-service ---
   embed_service:
     needs: changes
@@ -96,6 +108,9 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+      - name: Set kubeconfig
+        run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
 
       - name: Login to ACR
         uses: azure/docker-login@v1
@@ -134,8 +149,12 @@ jobs:
           docker tag $REGISTRY/embedding-service:$NEW_TAG $REGISTRY/embedding-service:latest
           docker push $REGISTRY/embedding-service:latest
 
+      - name: Rollout Restart Embedding-Service
+        if: needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true'
+        run: |
+          echo "Restart Embedding-Service"
+          kubectl rollout restart deployment embedding-service -n news-platform
 
-  # --- Terraform y Kubernetes ---
   terraform_and_k8s:
     needs: [changes, api_news, embed_service]
     if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.manifests == 'true'
@@ -167,19 +186,19 @@ jobs:
 
       - name: Set kubeconfig
         run: az aks get-credentials --resource-group newsPlatform-rg --name newsPlatform-aks --overwrite-existing
-
+     
       - name: Apply k8s manifests
         if: needs.changes.outputs.manifests == 'true'
         run: kubectl apply -f manifests/k8s/
 
-      - name: Rollout Restart for API-News
-        if: always() && (needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true')
+      - name: Rollout Restart API-News
+        if: needs.changes.outputs.api == 'true' || needs.changes.outputs.manifests == 'true'
         run: |
-          echo "Forzando Rollout Restart de api-news para usar la nueva imagen :latest"
+          echo "Restart API-News"
           kubectl rollout restart deployment api-news -n news-platform
 
-      - name: Rollout Restart for Embedding Service
-        if: always() && (needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true')
+      - name: Rollout Restart Embedding-Service
+        if: needs.changes.outputs.embed == 'true' || needs.changes.outputs.manifests == 'true'
         run: |
-          echo "Forzando Rollout Restart de embedding-service para usar la nueva imagen :latest"
+          echo "Restart Embedding-Service"
           kubectl rollout restart deployment embedding-service -n news-platform

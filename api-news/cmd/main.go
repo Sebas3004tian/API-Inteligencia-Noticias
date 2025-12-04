@@ -19,7 +19,7 @@ func main() {
 
 	app := fiber.New()
 
-	// Clients
+	// Client s
 	embeddingClient := embed.NewHttpEmbeddingClient(cfg.EmbeddingURL)
 	qdrantClient := qdrant.NewClient(cfg.QdrantHost, cfg.QdrantPort, cfg.Collection)
 
