@@ -30,7 +30,6 @@ spec:
               value: "384"
             - name: QDRANT_COLLECTION
               value: "articles"
-
 ---
 
 apiVersion: v1

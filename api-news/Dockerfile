@@ -14,4 +14,3 @@ EXPOSE 8081
 COPY --from=builder /app/main .
 
 CMD ["./main"]
-
